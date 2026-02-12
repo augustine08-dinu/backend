@@ -28,7 +28,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 120
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/login")
 
 
 # ------------------ DATABASE ------------------
@@ -44,17 +44,19 @@ def get_db():
 # ------------------ TOKEN CREATION ------------------
 
 def create_access_token(data: dict):
+    to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    data.update({"exp": expire})
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
 # ------------------ LOGIN ROUTE ------------------
 
 @app.post("/admin/login")
-def admin_login(credentials: dict):
-    username = credentials.get("username")
-    password = credentials.get("password")
+def admin_login(credentials: schemas.AdminLogin):
+
+    username = credentials.username
+    password = credentials.password
 
     if username != ADMIN_USERNAME or password != ADMIN_PASSWORD:
         raise HTTPException(
@@ -98,6 +100,6 @@ def get_reviews(
     db: Session = Depends(get_db),
     token: str = Depends(verify_token)
 ):
-    return db.query(models.Review)\
-        .order_by(models.Review.created_at.desc())\
+    return db.query(models.Review) \
+        .order_by(models.Review.created_at.desc()) \
         .all()
