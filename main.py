@@ -14,7 +14,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://honestlayer-admin.vercel.app/","https://honest-layer.vercel.app/"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -103,3 +103,4 @@ def get_reviews(
     return db.query(models.Review) \
         .order_by(models.Review.created_at.desc()) \
         .all()
+
