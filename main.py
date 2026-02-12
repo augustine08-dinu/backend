@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
 
 from database import engine, SessionLocal
 import models, schemas
@@ -20,25 +19,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------------
-# SECURITY CONFIG
-# -------------------------
+# ------------------ SECURITY CONFIG ------------------
 
-SECRET_KEY = "CHANGE_THIS_TO_RANDOM_SECRET"
+SECRET_KEY = "CHANGE_THIS_TO_RANDOM_SECRET_123"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
-# CHANGE THESE
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="admin/login")
 
 
-# -------------------------
-# DATABASE
-# -------------------------
+# ------------------ DATABASE ------------------
 
 def get_db():
     db = SessionLocal()
@@ -48,20 +41,15 @@ def get_db():
         db.close()
 
 
-# -------------------------
-# TOKEN CREATION
-# -------------------------
+# ------------------ TOKEN CREATION ------------------
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(data: dict):
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    data.update({"exp": expire})
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
 
-# -------------------------
-# LOGIN ROUTE
-# -------------------------
+# ------------------ LOGIN ROUTE ------------------
 
 @app.post("/admin/login")
 def admin_login(credentials: dict):
@@ -74,31 +62,25 @@ def admin_login(credentials: dict):
             detail="Invalid username or password"
         )
 
-    access_token = create_access_token(
-        data={"sub": username},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
-
-    return {"token": access_token}
+    token = create_access_token({"sub": username})
+    return {"token": token}
 
 
-# -------------------------
-# TOKEN VERIFICATION
-# -------------------------
+# ------------------ TOKEN VERIFY ------------------
 
 def verify_token(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
+
         if username != ADMIN_USERNAME:
             raise HTTPException(status_code=401, detail="Invalid user")
+
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-# -------------------------
-# PUBLIC REVIEW SUBMIT
-# -------------------------
+# ------------------ PUBLIC REVIEW SUBMIT ------------------
 
 @app.post("/review", response_model=schemas.ReviewResponse)
 def create_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
@@ -109,9 +91,7 @@ def create_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
     return new_review
 
 
-# -------------------------
-# PROTECTED REVIEWS LIST
-# -------------------------
+# ------------------ PROTECTED REVIEWS ------------------
 
 @app.get("/reviews", response_model=list[schemas.ReviewResponse])
 def get_reviews(
