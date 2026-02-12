@@ -13,3 +13,8 @@ class ReviewResponse(ReviewCreate):
 
     class Config:
         from_attributes = True
+
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
